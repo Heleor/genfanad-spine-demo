@@ -15,6 +15,13 @@
     <body>
         <p>Testing spine rigging.</p>
 
+        <div id="controls">
+            <p>
+                <select id="animation" onchange="selectAnimation()"></select>
+            </p>
+            <p id="skins"></p>
+        </div>
+
 		<script>
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
@@ -40,6 +47,32 @@ assetManager.loadText(meshFile);
 assetManager.loadTextureAtlas(atlasFile);
 
 var skeletonMesh;
+var skeletonData;
+
+function selectAnimation() {
+    if (!skeletonMesh) return;
+
+    let anim = document.getElementById('animation').value;
+
+    skeletonMesh.state.setAnimation(0, anim, true);
+}
+
+var allSkins = {};
+
+function updateSkin() {
+    if (!skeletonMesh) return;
+
+    let skin = new spine.Skin('test');
+
+    for (let i in allSkins) {
+        if (allSkins[i].checked) {
+            skin.addSkin(skeletonData.findSkin(i));
+        }    
+    }
+
+    skeletonMesh.skeleton.setSkin(skin);
+    skeletonMesh.skeleton.setSlotsToSetupPose();
+}
 
 function load() {
     loaded = true;
@@ -50,29 +83,39 @@ function load() {
     var atlasLoader = new spine.AtlasAttachmentLoader(atlas);
     var skeletonJson = new spine.SkeletonJson(atlasLoader);
     skeletonJson.scale = 0.1;
-    var skeletonData = skeletonJson.readSkeletonData(assetManager.get(meshFile));
+    skeletonData = skeletonJson.readSkeletonData(assetManager.get(meshFile));
 
+    let anims = document.getElementById('animation');
+    anims.innerHTML = ""; 
     for (let i in skeletonData.animations) {
-        console.log("Animation: " + skeletonData.animations[i].name);
+        let d = document.createElement('option');
+        d.value = skeletonData.animations[i].name;
+        d.innerText = skeletonData.animations[i].name;
+        anims.appendChild(d);
     }
 
+    let skins = document.getElementById('skins');
+    skins.innerHTML = ""; 
+    allSkins = {};
     for (let i in skeletonData.skins) {
-        console.log("Skins: " + skeletonData.skins[i].name);
+        let d = document.createElement('input');
+        d.setAttribute("type", "checkbox");
+        d.id = skeletonData.skins[i].name;      
+        skins.appendChild(d);
+
+        allSkins[d.id] = d;
+        d.onchange = updateSkin;
+
+        let l = document.createElement('label');
+        l.htmlFor = skeletonData.skins[i].name;
+        l.appendChild(document.createTextNode(skeletonData.skins[i].name));
+        skins.appendChild(l);
     }
 
     skeletonMesh = new spine.threejs.SkeletonMesh(skeletonData);
     skeletonMesh.state.setAnimation(0, 'walk_br', true);
     
-    let skin = new spine.Skin('test');
-
-    skin.addSkin(skeletonData.findSkin('body'));
-    skin.addSkin(skeletonData.findSkin('shirt'));
-    skin.addSkin(skeletonData.findSkin('skirt'));
-    skin.addSkin(skeletonData.findSkin('hair'));
-
-    skeletonMesh.skeleton.setSkin(skin);
-
-    skeletonMesh.skeleton.setSlotsToSetupPose();
+    updateSkin();
 
     skeletonMesh.translateY(-5);
     skeletonMesh.scale.set(scale,scale,scale);
