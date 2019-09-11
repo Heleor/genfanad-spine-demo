@@ -113,7 +113,7 @@ function load() {
     }
 
     skeletonMesh = new spine.threejs.SkeletonMesh(skeletonData);
-    skeletonMesh.state.setAnimation(0, 'walk_br', true);
+    skeletonMesh.state.setAnimation(0, 'walk/walk_back', true);
     
     updateSkin();
 
@@ -131,7 +131,7 @@ function animate() {
     }
 
     if (loaded) {
-        skeletonMesh.update(0.001);
+        skeletonMesh.update(0.01);
     }
 	renderer.render( scene, camera );
 }
