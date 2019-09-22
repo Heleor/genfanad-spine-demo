@@ -132,6 +132,7 @@ function animate() {
 
     if (loaded) {
         skeletonMesh.update(0.01);
+        skeletonMesh.lookAt(camera.position.x, skeletonMesh.position.y, camera.position.z);
     }
 	renderer.render( scene, camera );
 }
