@@ -1,8 +1,0 @@
-Notes: 
-- the textures aren't packed efficiently. Should the texture size be smaller?
-- skin has extra textures for the circles - will that be removed by the end?
-- full body is currently separating the pants and shirt - please move it into a single texture for shirt and pants (see the 'shirt/dress')
-- colors in skeleton - this should generally be left uncolored to allow for tinting
-- missing size information in the json file
-- setup for direction 
--- is that final or just demo?
