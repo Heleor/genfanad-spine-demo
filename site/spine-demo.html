@@ -22,7 +22,89 @@
             <p id="skins"></p>
         </div>
 
+        <div id="skin_div" style="float:right">
+
+        </div>
+
 		<script>
+
+const options = {"belt":["belt.png"],"body":["body.png"],"cape":["cape.png","cape_1.png","cape_2.png"],"face":["face.png","face_1.png"],"footwear":["footwear.png","footwear_1.png","footwear_2.png","footwear_3.png","footwear_4.png","footwear_5.png","footwear_6.png"],"fullbody":["fullbody.png"],"gloves":["gloves.png","gloves_1.png","gloves_2.png","gloves_3.png"],"hair":["hair.png","hair_1.png","hair_10.png","hair_11.png","hair_12.png","hair_2.png","hair_3.png","hair_4.png","hair_5.png","hair_6.png","hair_7.png","hair_8.png","hair_9.png"],"headgear":["headgear.png","headgear_1.png","headgear_2.png","headgear_3.png"],"necklace":["necklace.png"],"offhand":["offhand.png","offhand_1.png"],"pants":["pants.png","pants_1.png","pants_2.png","pants_3.png","pants_4.png","pants_5.png"],"scar":["scar.png"],"shirt":["shirt.png","shirt_1.png","shirt_10.png","shirt_11.png","shirt_12.png","shirt_13.png","shirt_14.png","shirt_2.png","shirt_3.png","shirt_4.png","shirt_5.png","shirt_6.png","shirt_7.png","shirt_8.png","shirt_9.png"],"skirt":["skirt.png","skirt_1.png"],"weaponBack":["weaponBack.png","weaponBack_1.png","weaponBack_10.png","weaponBack_11.png","weaponBack_12.png","weaponBack_2.png","weaponBack_3.png","weaponBack_4.png","weaponBack_5.png","weaponBack_6.png","weaponBack_7.png","weaponBack_8.png","weaponBack_9.png"],"weaponFullSize":["weaponFullSize.png","weaponFullSize_1.png","weaponFullSize_2.png","weaponFullSize_3.png","weaponFullSize_4.png","weaponFullSize_5.png"],"weaponMainHand":["weaponMainHand.png","weaponMainHand_1.png","weaponMainHand_2.png","weaponMainHand_3.png","weaponMainHand_4.png"]};
+
+var default_checked = {
+    body: true,
+    face: true,
+
+}
+
+function td(e) {
+    let td = document.createElement('td');
+    td.appendChild(e);
+    return td;
+}
+
+function check(id, checked) {
+    let d = document.createElement('input');
+    d.setAttribute("type", "checkbox");
+    d.id = id;      
+
+    if (checked) d.checked = true;
+
+    return d;
+}
+
+var allSkins = {};
+
+function setupSkins(w) {
+    console.log(JSON.stringify(w));
+    let s = document.getElementById('skin_div');
+    let t = document.createElement('table');
+    let heading = document.createElement('tr');
+    heading.innerHTML = '<th>Show</th><th>Rand</th><th>Skin</th><th>Color</th>';
+    t.appendChild(heading);
+
+    for (let slot in w) {
+        allSkins[slot] = true;
+        let tr = document.createElement('tr');
+
+        let show = check('show-' + slot, default_checked[slot]);
+        show.onchange = updateSkin;
+        tr.appendChild(td(show));
+
+        let rand = check('randomize-' + slot);
+        tr.appendChild(td(rand));
+
+        let s = document.createElement('select');
+        s.id = 'slot-' + slot;
+        s.style.width = '200px';
+        s.onchange = updateSkin;
+        for (let i in w[slot]) {
+            let oo = document.createElement('option');
+            oo.innerText = w[slot][i];
+            oo.value = w[slot][i];
+            s.appendChild(oo);
+        }
+        tr.appendChild(td(s));
+
+        let span = document.createElement('td');
+        let colCheck = check('color-' + slot);
+        colCheck.onchange = updateSkin;
+        span.appendChild(colCheck);
+        let color = document.createElement('input');
+        color.type = 'color';
+        color.value = '#ffffff';
+        color.onchange = updateSkin;
+        span.appendChild(color);
+        tr.appendChild(span);
+        
+
+        t.appendChild(tr);
+    }
+
+    s.appendChild(t);
+}
+
+setupSkins(options);
+
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
@@ -35,16 +117,17 @@ var material = new THREE.MeshBasicMaterial( { wireframe: true, color: 0x00ff00 }
 var cube = new THREE.Mesh( geometry, material );
 scene.add( cube );
 
-camera.position.z = 5;
+camera.position.z = 10;
 
 var controls = new THREE.OrbitControls(camera, renderer.domElement);
 
 var loaded = false;
-var assetManager = new spine.threejs.AssetManager('/spine/');
+var spineBase = "/spine/";
+var assetManager = new spine.threejs.AssetManager(spineBase);
 var meshFile = 'rig.json';
 var atlasFile = 'rig.atlas';
 assetManager.loadText(meshFile);
-assetManager.loadTextureAtlas(atlasFile);
+assetManager.loadText(atlasFile);
 
 var skeletonMesh;
 var skeletonData;
@@ -57,70 +140,110 @@ function selectAnimation() {
     skeletonMesh.state.setAnimation(0, anim, true);
 }
 
-var allSkins = {};
+let TIL = new THREE.ImageLoader();
+var spineTextureCache = {};
 
-function updateSkin() {
-    if (!skeletonMesh) return;
+function createAtlas(mods, callback) {
+    let text = assetManager.get(atlasFile);
+    mods = mods || {};
+
+    let pending = 0;
+    let atlas = new spine.TextureAtlas(text, (path) => {
+        let actual = mods[path] || path;
+
+        if (spineTextureCache[actual]) return spineTextureCache[actual];
+
+        pending++;
+        TIL.load(spineBase + actual, (image) => {
+            pending--;
+            spineTextureCache[actual] = new spine.threejs.ThreeJsTexture(image);
+            if (pending == 0) {
+                // recreate once all textures are ready.
+                createAtlas(mods, callback);
+            }
+        });
+
+        var fake = document.createElement("img");
+        fake.width = 16;
+        fake.height = 16;
+        return new spine.FakeTexture(fake);
+    });
+
+    if (pending == 0) callback(new spine.AtlasAttachmentLoader(atlas));
+}
+
+function tintSkin(skin, r,g,b) {
+    for (let i in skin.attachments) {
+        for (let j in skin.attachments[i]) {
+            skin.attachments[i][j].color.r = r;
+            skin.attachments[i][j].color.g = g;
+            skin.attachments[i][j].color.b = b;
+        }
+    }
+}
+
+function createPlayer(atlas) {
+    let scale = 0.1;
+
+    let skeletonJson = new spine.SkeletonJson(atlas);
+    skeletonJson.scale = 0.1;
+
+    let data = assetManager.get(meshFile);
+    skeletonData = skeletonJson.readSkeletonData(data);
+
+    let anims = document.getElementById('animation');
+    if (anims.childElementCount == 0) {
+        anims.innerHTML = ""; 
+        for (let i in skeletonData.animations) {
+            let d = document.createElement('option');
+            d.value = skeletonData.animations[i].name;
+            d.innerText = skeletonData.animations[i].name;
+            anims.appendChild(d);
+        }
+    }
+
+    if (skeletonMesh) cube.remove(skeletonMesh);
+
+    skeletonMesh = new spine.threejs.SkeletonMesh(skeletonData);
+    skeletonMesh.state.setAnimation(0, document.getElementById('animation').value, true);
+    skeletonMesh.zOffset = 0.01;
 
     let skin = new spine.Skin('test');
 
     for (let i in allSkins) {
-        if (allSkins[i].checked) {
+        let show = document.getElementById('show-' + i).checked;
+        if (show) {
             skin.addSkin(skeletonData.findSkin(i));
-        }    
+        }
     }
 
     skeletonMesh.skeleton.setSkin(skin);
     skeletonMesh.skeleton.setSlotsToSetupPose();
+
+    skeletonMesh.translateY(-5);
+    skeletonMesh.scale.set(scale,scale,scale);
+    cube.add(skeletonMesh);
+}
+
+function updateSkin() {
+    let mods = {};
+
+    // compute mods
+    for (let i in allSkins) {
+        let texture = document.getElementById('slot-' + i).value;
+        if (texture != i + '.png') {
+            mods['default/' + i + '/' + i + '.png'] = 'default/' + i + '/' + texture
+        }
+    }
+
+    createAtlas(mods, (atlas) => {
+        createPlayer(atlas);
+    });
 }
 
 function load() {
     loaded = true;
-
-    let scale = 0.1;
-
-    var atlas = assetManager.get(atlasFile);
-    var atlasLoader = new spine.AtlasAttachmentLoader(atlas);
-    var skeletonJson = new spine.SkeletonJson(atlasLoader);
-    skeletonJson.scale = 0.1;
-    skeletonData = skeletonJson.readSkeletonData(assetManager.get(meshFile));
-
-    let anims = document.getElementById('animation');
-    anims.innerHTML = ""; 
-    for (let i in skeletonData.animations) {
-        let d = document.createElement('option');
-        d.value = skeletonData.animations[i].name;
-        d.innerText = skeletonData.animations[i].name;
-        anims.appendChild(d);
-    }
-
-    let skins = document.getElementById('skins');
-    skins.innerHTML = ""; 
-    allSkins = {};
-    for (let i in skeletonData.skins) {
-        let d = document.createElement('input');
-        d.setAttribute("type", "checkbox");
-        d.id = skeletonData.skins[i].name;      
-        skins.appendChild(d);
-
-        allSkins[d.id] = d;
-        d.onchange = updateSkin;
-
-        let l = document.createElement('label');
-        l.htmlFor = skeletonData.skins[i].name;
-        l.appendChild(document.createTextNode(skeletonData.skins[i].name));
-        skins.appendChild(l);
-    }
-
-    skeletonMesh = new spine.threejs.SkeletonMesh(skeletonData);
-    skeletonMesh.state.setAnimation(0, 'walk/walk_back', true);
-    
     updateSkin();
-
-    skeletonMesh.translateY(-5);
-    skeletonMesh.scale.set(scale,scale,scale);
-
-    cube.add(skeletonMesh);
 }
 
 function animate() {
@@ -130,13 +253,14 @@ function animate() {
         load();
     }
 
-    if (loaded) {
-        skeletonMesh.update(0.01);
+    if (skeletonMesh) {
+        skeletonMesh.update(0.008);
         skeletonMesh.lookAt(camera.position.x, skeletonMesh.position.y, camera.position.z);
     }
 	renderer.render( scene, camera );
 }
 animate();
+
 		</script>
     </body>
 </html>
