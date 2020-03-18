@@ -6,7 +6,12 @@
 		<style>
 			body { margin: 0; }
 			canvas { width: 640px; height: 480px; }
-		</style>
+        </style>
+        
+        <script
+        src="https://code.jquery.com/jquery-3.4.1.js"
+        integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+        crossorigin="anonymous"></script>
 
         <script src="js/three.js"></script>
         <script src="js/spine.js"></script>
@@ -28,34 +33,9 @@
 
 		<script>
 
-const options = {"belt":["belt.png"],"body":["body.png"],"cape":["cape.png","cape_1.png","cape_2.png"],"face":["face.png","face_1.png"],"footwear":["footwear.png","footwear_1.png","footwear_2.png","footwear_3.png","footwear_4.png","footwear_5.png","footwear_6.png"],"fullbody":["fullbody.png"],"gloves":["gloves.png","gloves_1.png","gloves_2.png","gloves_3.png"],"hair":["hair.png","hair_1.png","hair_10.png","hair_11.png","hair_12.png","hair_2.png","hair_3.png","hair_4.png","hair_5.png","hair_6.png","hair_7.png","hair_8.png","hair_9.png"],"headgear":["headgear.png","headgear_1.png","headgear_2.png","headgear_3.png"],"necklace":["necklace.png"],"offhand":["offhand.png","offhand_1.png"],"pants":["pants.png","pants_1.png","pants_2.png","pants_3.png","pants_4.png","pants_5.png"],"scar":["scar.png"],"shirt":["shirt.png","shirt_1.png","shirt_10.png","shirt_11.png","shirt_12.png","shirt_13.png","shirt_14.png","shirt_2.png","shirt_3.png","shirt_4.png","shirt_5.png","shirt_6.png","shirt_7.png","shirt_8.png","shirt_9.png"],"skirt":["skirt.png","skirt_1.png"],"weaponBack":["weaponBack.png","weaponBack_1.png","weaponBack_10.png","weaponBack_11.png","weaponBack_12.png","weaponBack_2.png","weaponBack_3.png","weaponBack_4.png","weaponBack_5.png","weaponBack_6.png","weaponBack_7.png","weaponBack_8.png","weaponBack_9.png"],"weaponFullSize":["weaponFullSize.png","weaponFullSize_1.png","weaponFullSize_2.png","weaponFullSize_3.png","weaponFullSize_4.png","weaponFullSize_5.png"],"weaponMainHand":["weaponMainHand.png","weaponMainHand_1.png","weaponMainHand_2.png","weaponMainHand_3.png","weaponMainHand_4.png"]};
-
-var default_checked = {
-    body: true,
-    face: true,
-
-}
-
-function td(e) {
-    let td = document.createElement('td');
-    td.appendChild(e);
-    return td;
-}
-
-function check(id, checked) {
-    let d = document.createElement('input');
-    d.setAttribute("type", "checkbox");
-    d.id = id;      
-
-    if (checked) d.checked = true;
-
-    return d;
-}
-
 var allSkins = {};
 
-function setupSkins(w) {
-    console.log(JSON.stringify(w));
+$.getJSON('/skins', (w) => {
     let s = document.getElementById('skin_div');
     let t = document.createElement('table');
     let heading = document.createElement('tr');
@@ -78,6 +58,11 @@ function setupSkins(w) {
         s.style.width = '200px';
         s.onchange = updateSkin;
         for (let i in w[slot]) {
+            if (
+                w[slot][i] == slot + '.png' &&
+                w[slot][i] != 'body.png'
+            ) continue;
+            if (w[slot][i] == 'debug.png') continue;
             let oo = document.createElement('option');
             oo.innerText = w[slot][i];
             oo.value = w[slot][i];
@@ -90,6 +75,7 @@ function setupSkins(w) {
         colCheck.onchange = updateSkin;
         span.appendChild(colCheck);
         let color = document.createElement('input');
+        color.id = 'color-select-' + slot; 
         color.type = 'color';
         color.value = '#ffffff';
         color.onchange = updateSkin;
@@ -101,9 +87,28 @@ function setupSkins(w) {
     }
 
     s.appendChild(t);
+});
+
+var default_checked = {
+    body: true,
+    face: true,
 }
 
-setupSkins(options);
+function td(e) {
+    let td = document.createElement('td');
+    td.appendChild(e);
+    return td;
+}
+
+function check(id, checked) {
+    let d = document.createElement('input');
+    d.setAttribute("type", "checkbox");
+    d.id = id;      
+
+    if (checked) d.checked = true;
+
+    return d;
+}
 
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
