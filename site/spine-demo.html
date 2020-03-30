@@ -39,12 +39,16 @@ $.getJSON('/skins', (w) => {
     let s = document.getElementById('skin_div');
     let t = document.createElement('table');
     let heading = document.createElement('tr');
-    heading.innerHTML = '<th>Show</th><th>Rand</th><th>Skin</th><th>Color</th>';
+    heading.innerHTML = '<th>Slot</th><th>Show</th><th>Rand</th><th>Skin</th><th>Color</th>';
     t.appendChild(heading);
 
     for (let slot in w) {
         allSkins[slot] = true;
         let tr = document.createElement('tr');
+
+        let label = document.createElement('td');
+        label.innerText = slot;
+        tr.appendChild(label);
 
         let show = check('show-' + slot, default_checked[slot]);
         show.onchange = updateSkin;
