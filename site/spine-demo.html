@@ -23,6 +23,8 @@
         <div id="controls">
             <p>
                 <select id="animation" onchange="selectAnimation()"></select>
+                <input type='button' value='Randomize' onclick='randomize()'/>
+                <input type='button' value='Toggle Random Categories' onclick='toggleRandom()'/>
             </p>
             <p id="skins"></p>
         </div>
@@ -112,6 +114,104 @@ function check(id, checked) {
     if (checked) d.checked = true;
 
     return d;
+}
+
+const random_rules = {
+    belt: { rate: 0.3 },
+    body: { rate: 1.0, colors: 'body' },
+    cape: { rate: 0.1 },
+    face: { rate: 1.0 },
+    footwear: { rate: 0.3 },
+    fullbody: { rate: 0.1, disable: ['shirt', 'pants','skirt'] },
+    headgear: { rate: 0.3, disable: ['hair']},
+    necklace: { rate: 0.1 },
+    hair: { rate: 0.95, colors: 'naturalhair' },
+    shirt: { rate: 0.95, colors: 'basics' }, 
+    pants: { rate: 0.8, disable: ['skirt']},
+    skirt: { rate: 0.2, disable: ['pants']},
+    offhand: { rate: 0.1 },
+    weaponBack: { rate: 0.1, disable: ['weaponFullSize', 'weaponMainHand'] },
+    weaponFullSize: { rate: 0.1, disable: ['weaponBack', 'weaponMainHand'] },
+    weaponMainHand: { rate: 0.1, disable: ['weaponFullSize', 'weaponBack'] },
+}
+
+function randomElement(list) {
+    return list[Math.floor(Math.random() * list.length)];
+}
+
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+function randomize() {
+    for (let i in allSkins) {
+        if (!document.getElementById('randomize-' + i).checked) continue;
+
+        let r = random_rules[i] || { rate: 0.0 };
+        if (Math.random() < r.rate) {
+            document.getElementById('show-' + i).checked = true;
+
+            document.getElementById('slot-' + i).selectedIndex = 
+                Math.floor(Math.random() * document.getElementById('slot-' + i).childElementCount);
+
+            if (r.colors) {
+                document.getElementById('color-' + i).checked = true;
+
+                let c = '#ffffff';
+                if (r.colors == 'body') {
+                    c = randomElement([
+                        '#8d5524', '#c68642', '#e0ac69', '#f1c27d', '#ffdbac',
+                        '#ffffff'
+                    ]);
+                } else if (r.colors == 'all') {
+                    c = getRandomColor();
+                } else if (r.colors == 'naturalhair') {
+                    c = randomElement([
+                        '#090806', '#3b3024', '#504444', '#564838', '#a7856a', 
+                        '#b89778', '#dcd0ba', '#977961', '#b6cea8', '#a56b46', 
+                        '#91553d', '#633d32', '#d6c4c2', '#fff5e1', '#8d4a43', 
+                    ]);
+                } else if (r.colors == 'basics') {
+                    c = randomElement([
+                        '#ff0000', '#ffff00', '#ff00ff', '#00ff00', '#0000ff',
+                        '#00ffff', '#ff9999', '#99ff99', '#9999ff', '#999999',
+                        '#ffffff'
+                    ]);
+                }
+
+                document.getElementById('color-select-' + i).value = c;
+            }
+
+        } else {
+            document.getElementById('show-' + i).checked = false;
+        }
+    }
+
+    for (let i in allSkins) {
+        if (!document.getElementById('randomize-' + i).checked) continue;
+
+        let r = random_rules[i] || {};
+
+        if (document.getElementById('show-' + i).checked && r.disable) {
+            for (let j in r.disable) {
+                document.getElementById('show-' + r.disable[j]).checked = false;
+            }
+        }
+    }
+
+    updateSkin();
+}
+
+function toggleRandom() {
+    let value = !document.getElementById('randomize-body').checked;
+    for (let i in allSkins) {
+        document.getElementById('randomize-' + i).checked = value;
+    }
 }
 
 var scene = new THREE.Scene();
@@ -209,6 +309,8 @@ function createPlayer(atlas) {
             d.innerText = skeletonData.animations[i].name;
             anims.appendChild(d);
         }
+
+        anims.value = 'stand/stand_front';
     }
 
     if (skeletonMesh) cube.remove(skeletonMesh);
